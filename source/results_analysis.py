@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
 
-def metrics_predict_map(env,model,config,device,scaling_factor,input_test_processed,target_test,tracked_losses_train, tracked_losses_test):
+def metrics_predict_map(env,model,config,device,scaling_factor,input_test_processed,target_test,tracked_losses_train, tracked_losses_test,subdir="exploring_latent_space"):
     input_test_processed = input_test_processed.to(device)
     output = model(input_test_processed)  # Model output (logits or probabilities)
     output = output.cpu() 
@@ -90,7 +90,7 @@ def metrics_predict_map(env,model,config,device,scaling_factor,input_test_proces
     if allocentric:
         results["num_agents_accuracy"] = acc_agentnum
         results["agent_loc_accuracy"] = acc_agentloc
-    with open(f"outputs/model_evaluation/{config['config_name']}.json", "w") as f:
+    with open(f"outputs/{subdir}/model_evaluation/{config['config_name']}.json", "w") as f:
         json.dump(results, f, indent=4)
 
     return decoded_outputs
@@ -109,13 +109,11 @@ def print_metrics(config, metrics):
 
 
 
-def latent_space_PCA(latent_spaces,config,pos_list_train, dir_list_train,img_width,img_height):
+def latent_space_PCA(latent_spaces,config,pos_list_train, dir_list_train,img_width,img_height,subdir="exploring_latent_space"):
     for latent_space, label in latent_spaces:
         U, S, V = torch.pca_lowrank(latent_space, q=None, center=True, niter=2)
         mean = latent_space.mean(dim=0)
         input_centered = latent_space - mean
-
-        hue_indices = np.arange(latent_space.shape[0])
 
         top_2_components = V[:, :2]
 
@@ -133,21 +131,21 @@ def latent_space_PCA(latent_spaces,config,pos_list_train, dir_list_train,img_wid
         cumulative_variance = torch.cumsum(explained_variance, dim=0)
         variance_dict = {"explained_variance":explained_variance.tolist(),"cumulative_variance":cumulative_variance.tolist()}
 
-        Path(f"outputs/latent_space_PCA/{config['config_name']}").mkdir(parents=True, exist_ok=True)
+        Path(f"outputs/{subdir}/latent_space_PCA/{config['config_name']}").mkdir(parents=True, exist_ok=True)
         
-        with open(f"outputs/latent_space_PCA/{config['config_name']}/variance_{label}.json", "w") as f:
+        with open(f"outputs/{subdir}/latent_space_PCA/{config['config_name']}/variance_{label}.json", "w") as f:
             json.dump(variance_dict, f, indent=4)
 
 
         for i in config["variables_for_viewing_latent_space_representations"]:
-            Path(f"outputs/latent_space_PCA/{config['config_name']}/{i}").mkdir(parents=True, exist_ok=True)
+            Path(f"outputs/{subdir}/latent_space_PCA/{config['config_name']}/{i}").mkdir(parents=True, exist_ok=True)
             if (i == "x_position"):
                 pos_list_train_np = np.array(pos_list_train)
                 scatter = plt.scatter(input_2D_np[:, 0], input_2D_np[:, 1], c=pos_list_train_np[:,0], cmap='viridis', s=5)
                 plt.colorbar(scatter, shrink=0.4, pad=0.05, label="X")
                 plt.xlabel("1st principal component")
                 plt.ylabel("2nd principal component")
-                plt.savefig(f"outputs/latent_space_PCA/{config['config_name']}/{i}/2D_{label}.png")
+                plt.savefig(f"outputs/{subdir}/latent_space_PCA/{config['config_name']}/{i}/2D_{label}.png")
                 plt.clf()
                 ax = plt.figure().add_subplot(projection='3d')
                 ax.set_xlabel("1st principal component")
@@ -155,7 +153,7 @@ def latent_space_PCA(latent_spaces,config,pos_list_train, dir_list_train,img_wid
                 ax.set_zlabel("3rd principal component")
                 scatter = ax.scatter(input_3D_np[:, 0], input_3D_np[:, 1], input_3D_np[:, 2], c=pos_list_train_np[:,0], cmap='viridis')
                 plt.colorbar(scatter, ax=ax, label='X',shrink=0.6, pad=0.1)
-                plt.savefig(f"outputs/latent_space_PCA/{config['config_name']}/{i}/3D_{label}.png")
+                plt.savefig(f"outputs/{subdir}/latent_space_PCA/{config['config_name']}/{i}/3D_{label}.png")
                 plt.clf()
             elif (i == "y_position"):
                 pos_list_train_np = np.array(pos_list_train)
@@ -163,7 +161,7 @@ def latent_space_PCA(latent_spaces,config,pos_list_train, dir_list_train,img_wid
                 plt.colorbar(scatter, shrink=0.4, pad=0.05, label="Y")
                 plt.xlabel("1st principal component")
                 plt.ylabel("2nd principal component")
-                plt.savefig(f"outputs/latent_space_PCA/{config['config_name']}/{i}/2D_{label}.png")
+                plt.savefig(f"outputs/{subdir}/latent_space_PCA/{config['config_name']}/{i}/2D_{label}.png")
                 plt.clf()
                 ax = plt.figure().add_subplot(projection='3d')
                 ax.set_xlabel("1st principal component")
@@ -171,7 +169,7 @@ def latent_space_PCA(latent_spaces,config,pos_list_train, dir_list_train,img_wid
                 ax.set_zlabel("3rd principal component")
                 scatter = ax.scatter(input_3D_np[:, 0], input_3D_np[:, 1], input_3D_np[:, 2], c=pos_list_train_np[:,1], cmap='viridis')
                 plt.colorbar(scatter, ax=ax, label='Y',shrink=0.6, pad=0.1)
-                plt.savefig(f"outputs/latent_space_PCA/{config['config_name']}/{i}/3D_{label}.png")
+                plt.savefig(f"outputs/{subdir}/latent_space_PCA/{config['config_name']}/{i}/3D_{label}.png")
                 plt.clf()
             elif (i== "L2_dist_center"):
                 dist_list = np.sqrt((np.array(pos_list_train)[:,0]-(img_width-1)/2)**2+ (np.array(pos_list_train)[:,1]-(img_height-1)/2)**2)
@@ -179,7 +177,7 @@ def latent_space_PCA(latent_spaces,config,pos_list_train, dir_list_train,img_wid
                 plt.colorbar(scatter, shrink=0.4, pad=0.05, label="L2 distance to center")
                 plt.xlabel("1st principal component")
                 plt.ylabel("2nd principal component")
-                plt.savefig(f"outputs/latent_space_PCA/{config['config_name']}/{i}/2D_{label}.png")
+                plt.savefig(f"outputs/{subdir}/latent_space_PCA/{config['config_name']}/{i}/2D_{label}.png")
                 plt.clf()
                 ax = plt.figure().add_subplot(projection='3d')
                 ax.set_xlabel("1st principal component")
@@ -187,7 +185,7 @@ def latent_space_PCA(latent_spaces,config,pos_list_train, dir_list_train,img_wid
                 ax.set_zlabel("3rd principal component")
                 scatter = ax.scatter(input_3D_np[:, 0], input_3D_np[:, 1], input_3D_np[:, 2], c=dist_list, cmap='viridis')
                 plt.colorbar(scatter, ax=ax, label='L2 distance to center',shrink=0.6, pad=0.1)
-                plt.savefig(f"outputs/latent_space_PCA/{config['config_name']}/{i}/3D_{label}.png")
+                plt.savefig(f"outputs/{subdir}/latent_space_PCA/{config['config_name']}/{i}/3D_{label}.png")
                 plt.clf()   
             elif (i == "head_direction"):
                 dir_list_train_np = np.array(dir_list_train)
@@ -195,7 +193,7 @@ def latent_space_PCA(latent_spaces,config,pos_list_train, dir_list_train,img_wid
                 plt.colorbar(scatter, shrink=0.4, pad=0.05, label="Head direction")
                 plt.xlabel("1st principal component")
                 plt.ylabel("2nd principal component")
-                plt.savefig(f"outputs/latent_space_PCA/{config['config_name']}/{i}/2D_{label}.png")
+                plt.savefig(f"outputs/{subdir}/latent_space_PCA/{config['config_name']}/{i}/2D_{label}.png")
                 plt.clf()
                 ax = plt.figure().add_subplot(projection='3d')
                 ax.set_xlabel("1st principal component")
@@ -203,12 +201,14 @@ def latent_space_PCA(latent_spaces,config,pos_list_train, dir_list_train,img_wid
                 ax.set_zlabel("3rd principal component")
                 scatter = ax.scatter(input_3D_np[:, 0], input_3D_np[:, 1], input_3D_np[:, 2], c=dir_list_train_np[:], cmap='viridis')
                 plt.colorbar(scatter, ax=ax, label='Head direction',shrink=0.6, pad=0.1)
-                plt.savefig(f"outputs/latent_space_PCA/{config['config_name']}/{i}/3D_{label}.png")
+                plt.savefig(f"outputs/{subdir}/latent_space_PCA/{config['config_name']}/{i}/3D_{label}.png")
                 plt.clf()
                 
 
 def accuracy(a,b):
-    return (a==b).float().mean().item()
+    if a.ndim == 1:
+        return (a == b).float().mean().item()
+    return (a == b).all(dim=-1).float().mean().item()
 
 def mse (a, b):
     return (a-b).pow(2).mean().item()
@@ -218,3 +218,6 @@ def round(a):
 
 def identity(a):
     return a
+
+def argmax(a):
+    return torch.argmax(a,dim=1)

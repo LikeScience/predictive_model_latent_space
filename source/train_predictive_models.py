@@ -9,6 +9,10 @@ def one_hot_encode(values, num_classes):
     one_hot[values] = 1
     return one_hot
 
+def list_argmax(values):
+    x = max(values)
+    return values.index(x)
+
 # Function to process the entire array (each input array of shape [length])
 def process_input(input_array, mode,img_width,img_height,scaling_factor=10):
     if mode == 'in':
@@ -20,27 +24,9 @@ def process_input(input_array, mode,img_width,img_height,scaling_factor=10):
         return torch.cat([world_map, action_encoding], dim=0)
     elif mode == 'out':
         return torch.tensor(input_array[:-1])/scaling_factor
-    
-def init_weights_kaiming_normal(layer):
-  """
-  Initializes weights from linear PyTorch layer
-  with kaiming normal distribution.
-
-  Args:
-    layer (torch.Module)
-        Pytorch layer
-
-  Returns:
-    Nothing.
-  """
-  # check for linear PyTorch layer
-  if isinstance(layer, nn.Linear):
-    # initialize weights with kaiming normal distribution
-    nn.init.kaiming_normal_(layer.weight.data)
-    
 
 def runSGD(net, input_train, target_train, input_test, target_test, device, lr=0.001, criterion='mse',
-           n_epochs=10, batch_size=32,notrain=False,seed=73,shuffle=False):
+           n_epochs=10, batch_size=32,notrain=False,seed=73,shuffle=False,hide_plot=False):
   """
   Trains autoencoder network with stochastic gradient descent with Adam
   optimizer and loss criterion. Train samples are shuffled, and loss is
@@ -151,12 +137,13 @@ def runSGD(net, input_train, target_train, input_test, target_test, device, lr=0
   # Plot loss
   step = int(np.ceil(len(track_loss) / 500))
   input_range = np.arange(0, len(track_loss), step)
-  plt.figure()
-  plt.plot(input_range, track_loss[::step], 'C0')
-  plt.xlabel('Iterations')
-  plt.ylabel('Loss')
-  plt.xlim([0, None])
-  plt.ylim([0, None])
-  plt.show()
+  if not hide_plot:
+    plt.figure()
+    plt.plot(input_range, track_loss[::step], 'C0')
+    plt.xlabel('Iterations')
+    plt.ylabel('Loss')
+    plt.xlim([0, None])
+    plt.ylim([0, None])
+    plt.show()
   net.eval()
   return track_loss_train, track_loss_test

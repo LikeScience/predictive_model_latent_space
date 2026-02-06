@@ -20,6 +20,7 @@ class LinearDecoder(nn.Module):
     def forward(self, x):
         return self.layer2(F.relu(self.layer1(x)))
 
+
 class AutoencoderWithRNN(nn.Module):
     def __init__(self, input_size, output_size, hidden_fac, latent_size,device):
         super().__init__()
@@ -58,3 +59,44 @@ class AutoencoderWithoutRNN(nn.Module):
     def get_latent(self, x):
         encoded  = self.encoder.forward(x)
         return encoded, None
+    
+
+class AutoencoderRNNSeparateAction(nn.Module):
+    def __init__(self, map_size, action_encoding_size, output_size, hidden_fac, latent_size,device):
+        super().__init__()
+        self.device = device
+        self.encoder = LinearEncoder(map_size, hidden_fac, latent_size-action_encoding_size)
+        self.rnn = nn.RNN(latent_size,latent_size,nonlinearity='relu')
+        self.decoder = LinearDecoder(output_size, hidden_fac, latent_size)
+        self.map_size = map_size
+        self.latent_size = latent_size
+        
+    def forward(self, x):
+        x_map, x_action = x[:,:self.map_size], x[:,self.map_size:]
+        encoded_map  = self.encoder.forward(x_map)
+        encoded = torch.cat([encoded_map,x_action],axis=1)
+        hidden = torch.randn(1,self.latent_size,device = self.device)
+        latent, hidden = self.rnn(encoded, hidden)
+        out = self.decoder(latent)
+        return out
+    
+    def get_latent(self, x):
+        x_map = x[:,:self.map_size]
+        encoded_map  = self.encoder.forward(x_map)
+        # hidden = torch.randn(1,self.latent_size,device = self.device)
+        # latent, _ = self.rnn(encoded_map, hidden)
+        return encoded_map, None
+
+class AutoencoderInputs(nn.Module):
+    def __init__(self, map_size,device):
+        super().__init__()
+        self.device = device
+        self.map_size = map_size
+        
+    def forward(self, x):
+        x_map = x[:,:self.map_size]
+        return x_map
+    
+    def get_latent(self, x):
+        x_map = x[:,:self.map_size]
+        return x_map, None
