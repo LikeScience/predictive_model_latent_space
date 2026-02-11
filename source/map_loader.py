@@ -13,6 +13,7 @@ class Env(MiniGridEnv):
         map_dims: list,
         agent_start_pos=(1, 1),
         agent_start_dir=0,
+        colors=None, 
         seed=7342,
         max_steps: int | None = None,
         **kwargs,
@@ -22,6 +23,7 @@ class Env(MiniGridEnv):
         self.env_seed = seed
         self.world_map = wmap
         self.exploring=False
+        self.colors=colors
 
         mission_space = MissionSpace(mission_func=self._gen_mission)
 
@@ -47,11 +49,14 @@ class Env(MiniGridEnv):
       else:
           self.place_agent()
       self.valid_actions = {Actions.left, Actions.right, Actions.forward}
-
+      if self.colors is not None:
+          this_colors = self.colors
+      else:
+          this_colors = [[5 for _ in range(width)] for _ in range(height)]
       for i in range(1,height-1):
           for j in range(1,width-1):
               if (i,j) != self.agent_start_pos:
-                obj = WorldObj.decode(self.world_map[i][j],5,1) #Assuming all objects with same color and doors start closed
+                obj = WorldObj.decode(self.world_map[i][j],this_colors[i][j],1) #Assuming all objects with same color and doors start closed
                 if obj is not None:
                     self.grid.set(j,i,obj) 
     
@@ -59,6 +64,10 @@ class Env(MiniGridEnv):
     def get_array_repr(self):
         grid_array = self.unwrapped.grid.encode()[:,:,0]
         grid_array[self.agent_pos[0],self.agent_pos[1]]=OBJECT_TO_IDX['agent']
+        return grid_array.T
+        
+    def get_colors_repr(self):
+        grid_array = self.unwrapped.grid.encode()[:,:,1]
         return grid_array.T
     
 
